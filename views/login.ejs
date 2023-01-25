@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!--====== Required meta tags ======-->
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="description" content="" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!--====== Title ======-->
+    <title>Custom Mailwizz Sign In</title>
+
+    <!--====== Favicon Icon ======-->
+    <link
+      rel="shortcut icon"
+      href="../assets/images/favicon.svg"
+      type="image/svg"
+    />
+
+    <!--====== Bootstrap css ======-->
+    <link rel="stylesheet" href="../assets/css/bootstrap.min.css" />
+
+    <!--====== Line Icons css ======-->
+    <link rel="stylesheet" href="../assets/css/lineicons.css" />
+
+    <!--====== Style css ======-->
+    <link rel="stylesheet" href="../assets/scss/starter.css" />
+
+    <!--====== Stylesheet css ======-->
+    <link rel="stylesheet" href="../assets/css/stylesheet.css" />
+
+    <link rel="stylesheet" href="../assets/scss/sign-in-up/sign-in-up-01.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/fastbootstrap@1.1.1/dist/css/fastbootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha256-Yzz+k0rjOAAPX4Nkr73zQvppd6buXomR9n4uQ5lrSYE="
+      crossorigin="anonymous"
+    />
+  </head>
+
+  <body>
+    <!--====== SIGNIN ONE PART START ======-->
+
+    <section class="signin-area signin-one h-vh">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-5">
+            <% if (response) { %>
+            <div
+              class="alert alert-<%= response.success %> alert-dismissible fade show"
+              role="alert"
+            >
+              <%= response.message %>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+              ></button>
+            </div>
+            <% } %>
+            <form action="/auth/login" method="post">
+              <div class="signin-form form-style-two rounded-buttons">
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="p-4">
+                      <h1 class="f-24 text-center p-2">
+                        Login to your account
+                      </h1>
+                      <p class="text text-center">Enter Credential to Signin</p>
+                    </div>
+                  </div>
+
+                  <div class="col-md-12">
+                    <div class="form-input">
+                      <div class="input-items default">
+                        <input
+                          type="email"
+                          placeholder="Email"
+                          name="email"
+                          required
+                        />
+                        <i class="lni lni-envelope"></i>
+                      </div>
+                    </div>
+                    <!-- form input -->
+                  </div>
+
+                  <div class="col-md-12">
+                    <div class="form-input">
+                      <div class="input-items default">
+                        <input
+                          type="password"
+                          placeholder="Password"
+                          name="password"
+                          required
+                        />
+                        <i class="lni lni-key"></i>
+                      </div>
+                    </div>
+                    <!-- form input -->
+                  </div>
+                  <div class="col-md-12 my-6">
+                    <div class="form-input rounded-buttons">
+                      <button
+                        class="btn primary-btn btn-rounded-full"
+                        type="submit"
+                      >
+                        Sign In!
+                      </button>
+                    </div>
+                    <!-- form input -->
+                  </div>
+
+                  <div class="col-md-12">
+                    <p class="text-center">
+                      Don't have an account?
+                      <a href="/auth/signup" data-abc="true">Signup </a>
+                      here
+                    </p>
+
+                    <!-- form input -->
+                  </div>
+                </div>
+              </div>
+              <!-- signin form -->
+            </form>
+          </div>
+        </div>
+        <!-- row -->
+      </div>
+      <!-- container -->
+    </section>
+
+    <!--====== SIGNIN ONE PART ENDS ======-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/fastbootstrap@1.1.1/dist/js/fastbootstrap.min.js"
+      integrity="sha256-EA7CcsZVlKgu1Vdk1Nsl648ddvyavbdyjR/vnaTuomk="
+      crossorigin="anonymous"
+    ></script>
+    <script src="../assets/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </body>
+</html>
