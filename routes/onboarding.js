@@ -2,7 +2,11 @@ const express = require("express");
 const { auth } = require("../middleware/auth");
 const Account = require("../models/account");
 const mailWizz = require("node-mailwizz");
-const { storeAccount, storeGoogleSheetData, storeGoogleSheetID } = require("../utils/utils");
+const {
+  storeAccount,
+  storeGoogleSheetData,
+  storeGoogleSheetID,
+} = require("../utils/utils");
 const jwt = require("jsonwebtoken");
 const { accountToken, token, googleSheetToken } = require("../config/config");
 const EventEmitter = require("events");
@@ -129,27 +133,27 @@ router.post("/connect", auth, async (req, res) => {
   }
 });
 
-router.get('/connect', auth, async(req, res) => {
-try {
-  const getAvailableSheet = await GoogleID.find({user:  req.user.id})
+router.get("/connect", auth, async (req, res) => {
+  try {
+    const getAvailableSheet = await GoogleID.find({ user: req.user.id });
 
-  req.session.response = {
-    message: `Save google sheet or use if google sheet is available`,
-    success: true,
-    type: "info",
-  };
+    req.session.response = {
+      message: `Save google sheet or use if google sheet is available`,
+      success: true,
+      type: "info",
+    };
 
-  if (getAvailableSheet.length !== 0) {
-    res.render("getConnectedSheet", {
-      googleSheet: getAvailableSheet,
-    });
-  } else {
-    res.render("connect");
+    if (getAvailableSheet.length !== 0) {
+      res.render("getConnectedSheet", {
+        googleSheet: getAvailableSheet,
+      });
+    } else {
+      res.render("connect");
+    }
+  } catch (error) {
+    console.log(error.message);
   }
-} catch (error) {
-  console.log(error.message)
-}
-})
+});
 
 router.get("/list", auth, async (req, res) => {
   const { account } = req.cookies;
@@ -378,7 +382,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth,
       spreadsheetId: req.params.id,
-      range: "Class Data!A2:E",
+      range: "Sheet1!A2:A",
     });
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
@@ -389,7 +393,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
       return res.redirect("/onboarding");
     } else {
       const storeRowsToCookies = storeGoogleSheetData(rows);
-      req.session.storeData = { rows:rows, };
+      req.session.storeData = { rows: rows };
       req.session.response = {
         message: `Data found in the google sheet`,
         success: "info",
@@ -417,15 +421,17 @@ router.get("/sheet/:id", auth, async (req, res) => {
 });
 router.get("/sheet", auth, async (req, res) => {
   try {
+    const { sheetID } = req.cookies;
 
-    const {sheetID} = req.cookies
-
-    if(sheetID === undefined) {
-      return res.redirect('/onboarding/connect')
+    if (sheetID === undefined) {
+      return res.redirect("/onboarding/connect");
     }
 
-    const {googleID} = sheetID.payload
-    console.log(sheetID)
+    const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
+
+    console.log(getGoogleSheetId);
+
+    const { googleID } = getGoogleSheetId.payload;
 
     const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
@@ -434,6 +440,7 @@ router.get("/sheet", auth, async (req, res) => {
     /**
      * Prints the names and majors of students in a sample spreadsheet:
      * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+     * https://docs.google.com/spreadsheets/d/1bIlgvhRip-_4TwVIhpcfvpNDkT_DU70Fcb9PvwFNE7Y/edit#gid=0
      * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
      */
 
@@ -447,7 +454,7 @@ router.get("/sheet", auth, async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth,
       spreadsheetId: googleID,
-      range: "Class Data!A2:E",
+      range: "Sheet1!A2:A",
     });
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
@@ -514,9 +521,10 @@ router.post("/upload/sheet/:id", async (req, res) => {
       items,
       (item, i) => {
         console.log(`#${i}: ${item[0]} `);
-        const FName = item[1];
-        const LName = item[2];
-        const Email = item[3];
+
+        const FName = item[1] || "";
+        const LName = item[2] || "";
+        const Email = item[0];
         const { account } = req.cookies;
 
         const strAccount = jwt.verify(account, accountToken.Secret);
@@ -534,14 +542,14 @@ router.post("/upload/sheet/:id", async (req, res) => {
         const userInfo = {
           FNAME: FName,
           LNAME: LName,
-          EMAIL: `${i}xyz@gmail.com`,
+          EMAIL: Email,
         };
 
         subscribers
           .create(req.params.id, userInfo)
           .then(function (responseData) {
             req.session.response = {
-              rows:rows,
+              rows: rows,
               message: `Upload #${i}: ${item.FirstName} successfully`,
               success: "info",
               data: responseData,
