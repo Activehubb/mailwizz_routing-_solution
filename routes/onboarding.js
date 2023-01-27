@@ -382,7 +382,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth,
       spreadsheetId: req.params.id,
-      range: "Sheet1!A2:A",
+      range: "Sheet1",
     });
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
@@ -398,9 +398,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
         message: `Data found in the google sheet`,
         success: "info",
       };
-      res.cookie("rows", storeRowsToCookies).render("sheet", {
-        rows: rows,
-      });
+      res.cookie("rows", storeRowsToCookies).redirect("/onboarding");
     }
   } catch (error) {
     if (error) {
@@ -454,7 +452,7 @@ router.get("/sheet", auth, async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth,
       spreadsheetId: googleID,
-      range: "Sheet1!A2:A",
+      range: "Sheet1",
     });
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
