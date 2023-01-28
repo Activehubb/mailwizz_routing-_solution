@@ -12,7 +12,7 @@ router.get("/login", (req, res) => {
   const { Bearer } = req.cookies;
 
   if (Bearer) {
-    res.redirect("/onboarding");
+    return res.redirect("/onboarding");
   }
   res.render("login");
 });
@@ -29,7 +29,7 @@ router.post("/login", async (req, res) => {
         message: "Invalid credentials",
         success: "danger",
       };
-      res.redirect("/auth/login");
+     return res.redirect("/auth/login");
     } else if (user) {
       console.log("userdata", user);
 
@@ -40,7 +40,7 @@ router.post("/login", async (req, res) => {
           message: "Invalid credentials",
           success: "danger",
         };
-        res.redirect("/auth/login");
+        return res.redirect("/auth/login");
       }
 
       const assignToken = await tokens(user);
@@ -64,7 +64,7 @@ router.get("/signup", (req, res) => {
   const { Bearer } = req.cookies;
 
   if (Bearer) {
-    res.redirect("/onboarding");
+    return res.redirect("/onboarding");
   }
   res.render("signup");
 });

@@ -468,9 +468,7 @@ router.get("/sheet", auth, async (req, res) => {
         message: `Data found in the google sheet`,
         success: "info",
       };
-      res.cookie("rows", storeRowsToCookies).render("sheet", {
-        rows: rows,
-      });
+      res.cookie("rows", storeRowsToCookies).redirect("/onboarding");
     }
   } catch (error) {
     if (error) {
@@ -490,7 +488,7 @@ router.get("/sheet", auth, async (req, res) => {
   // });
 });
 
-router.post("/upload/sheet/:id", async (req, res) => {
+router.post("/upload/sheet/:id", auth, async (req, res) => {
   try {
     const { rows } = req.cookies;
 
@@ -577,7 +575,73 @@ router.post("/upload/sheet/:id", async (req, res) => {
   }
 });
 
-router.delete("/lists/delete/:id", auth, (req, res) => {
-  res.render("account");
+router.get("/delete/sheet/:id", auth, async (req, res) => {
+  try {
+    const sheet = await GoogleID.findByIdAndDelete({ _id: req.params.id });
+
+    if (sheet !== null) {
+      req.session.response = {
+        message: `SheetID Deleted successfully`,
+        success: "info",
+      };
+      return res.redirect("/onboarding");
+    }
+  } catch (error) {
+    req.session.response = {
+      message: `${error.message}`,
+      success: "danger",
+    };
+    return res.redirect("/onboarding");
+  }
+});
+router.get("/delete/account/:id", auth, async (req, res) => {
+  try {
+    const account = await Account.findByIdAndDelete({ _id: req.params.id });
+
+    if (account !== null) {
+      req.session.response = {
+        message: `Account Deleted successfully`,
+        success: "info",
+      };
+      return res.redirect("/onboarding");
+    }
+  } catch (error) {
+    req.session.response = {
+      message: `${error.message}`,
+      success: "danger",
+    };
+    return res.redirect("/onboarding");
+  }
+});
+router.get("/delete/user/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete({ _id: req.params.id });
+
+    if (user !== null) {
+      req.session.response = {
+        message: `Account Deleted successfully`,
+        success: "success",
+      };
+      return res.redirect("/onboarding");
+    }
+  } catch (error) {
+    req.session.response = {
+      message: `${error.message}`,
+      success: "danger",
+    };
+    return res.redirect("/onboarding");
+  }
+});
+router.get("/del/account/:id", auth, (req, res) => {
+  const id = req.params.id;
+  res.render("warning", { id: id });
+});
+router.get("/del/sheet/:id", auth, (req, res) => {
+  const id = req.params.id;
+  res.render("sheetDel", { id: id });
+});
+router.get("/del/user/:id", auth, (req, res) => {
+  const id = req.params.id;
+  res.render("userDel", { id: id });
 });
 module.exports = router;
