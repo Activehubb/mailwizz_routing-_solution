@@ -6,7 +6,7 @@ module.exports = {
     callbackURL: "/auth/google/redirect",
   },
   mongoDB_URI:
-    "mongodb+srv://postol:~Sin2+Cos2=1~@postolcluster.xvtqz1m.mongodb.net/?retryWrites=true&w=majority",
+    "mongodb+srv://theseagull:$1M@Dec2023@cluster0.kjtdjeh.mongodb.net/?retryWrites=true&w=majority",
   session: {
     key: "cookie_session_1!1!1!",
   },
