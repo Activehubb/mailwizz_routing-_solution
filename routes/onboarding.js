@@ -20,50 +20,44 @@ const { GoogleAuth } = require("google-auth-library");
 const { google } = require("googleapis");
 const User = require("../models/user");
 const GoogleID = require("../models/googleId");
+const sheetData = require("../models/sheet");
+const SheetData = require("../models/sheet");
 
 const router = express.Router();
+
+const sheetBucket = [];
 
 // Get all Account
 router.get("/", auth, async (req, res) => {
   try {
-    const { Bearer, account, rows } = req.cookies;
-
-    const decoded = jwt.verify(Bearer, token.Secret);
-
-    req.user = await User.findOne({ _id: decoded.data._id });
-
-    console.log("User:", req.user);
+    const { account } = req.cookies;
 
     const accountDB = await Account.find({ user: req.user._id });
 
     if (account !== undefined) {
       const strAccount = jwt.verify(account, accountToken.Secret);
 
-      const { accountAPIkey, baseURL } = strAccount.payload;
+      const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
       const config = {
-        publicKey: accountAPIkey,
+        publicKey: accountPublicKey,
         secret: accountAPIkey,
         baseUrl: baseURL,
       };
 
-      if (rows !== undefined) {
-        const decodeRow = jwt.verify(rows, googleSheetToken);
-
-        console.log(decodeRow);
-        req.session.storeData = { rows: decodeRow.payload };
-      }
-
       const lists = new mailWizz.Lists(config);
 
-      lists.getLists((page = 1), (perPage = 10)).then((response) => {
-        const parseResponse = JSON.parse(response);
-        console.log(parseResponse);
-        res.render("home", {
-          accountDB: accountDB,
-          list: parseResponse.data,
-        });
-      });
+      lists
+        .getLists((page = 1), (perPage = 10))
+        .then((response) => {
+          const parseResponse = JSON.parse(response);
+          console.log(parseResponse);
+          res.render("home", {
+            accountDB: accountDB,
+            list: parseResponse.data,
+          });
+        })
+        .catch((err) => console.log(err));
     } else {
       res.render("dashboard", { user: req.user });
     }
@@ -76,7 +70,6 @@ router.get("/", auth, async (req, res) => {
 router.get("/account", auth, async (req, res) => {
   try {
     const account = await Account.find({ user: req.user._id });
-    console.log(account);
 
     if (account.length !== 0) {
       res.render("getAccount", {
@@ -115,12 +108,14 @@ router.post("/account", auth, async (req, res) => {
 // Connect ID
 router.post("/connect", auth, async (req, res) => {
   try {
-    const { idName, googleID } = req.body;
+    const { idName, googleID, limit, range } = req.body;
 
     const googleId = new GoogleID({
       user: req.user._id,
       idName,
       googleID,
+      limit,
+      range,
     });
 
     await googleId.save();
@@ -161,10 +156,10 @@ router.get("/list", auth, async (req, res) => {
   if (account !== undefined) {
     const strAccount = jwt.verify(account, accountToken.Secret);
 
-    const { accountAPIkey, baseURL } = strAccount.payload;
+    const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
     const config = {
-      publicKey: accountAPIkey,
+      publicKey: accountPublicKey,
       secret: accountAPIkey,
       baseUrl: baseURL,
     };
@@ -183,29 +178,49 @@ router.get("/list", auth, async (req, res) => {
 });
 
 router.get("/lists", auth, async (req, res) => {
-  const { account } = req.cookies;
+  try {
+    const { account } = req.cookies;
 
-  if (account !== undefined) {
-    const strAccount = jwt.verify(account, accountToken.Secret);
+    if (account) {
+      const strAccount = jwt.verify(account, accountToken.Secret);
 
-    const { accountAPIkey, baseURL } = strAccount.payload;
+      const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
-    const config = {
-      publicKey: accountAPIkey,
-      secret: accountAPIkey,
-      baseUrl: baseURL,
+      const config = {
+        publicKey: accountPublicKey,
+        secret: accountAPIkey,
+        baseUrl: baseURL,
+      };
+
+      const lists = new mailWizz.Lists(config);
+
+      lists
+        .getLists((page = 1), (perPage = 10))
+        .then((response) => {
+          if (response) {
+            req.session.response = {
+              message: "Account created successfully, List found",
+              success: "info",
+            };
+            return res.redirect("/onboarding");
+          }
+        })
+        .catch((err) => {
+          req.session.response = {
+            message: err.error,
+            success: "danger",
+          };
+          return res.redirect("/onboarding");
+        });
+    } else {
+      res.redirect("/onboarding/account");
+    }
+  } catch (error) {
+    req.session.response = {
+      message: error.message,
+      success: "danger",
     };
-
-    const lists = new mailWizz.Lists(config);
-
-    lists
-      .getLists((page = 1), (perPage = 10))
-      .then((response) => {
-        if (response) res.redirect("/onboarding");
-      })
-      .catch((err) => console.log(err));
-  } else {
-    res.redirect("/onboarding/account");
+    res.redirect("/onboarding");
   }
 });
 
@@ -219,7 +234,7 @@ router.get("/lists/:id", auth, async (req, res) => {
     const { accountAPIkey, baseURL, accountPublicKey } = getAccountAPIkey;
 
     const config = {
-      publicKey: accountAPIkey,
+      publicKey: accountPublicKey,
       secret: accountAPIkey,
       baseUrl: baseURL,
     };
@@ -228,18 +243,27 @@ router.get("/lists/:id", auth, async (req, res) => {
 
     lists
       .getLists((page = 1), (perPage = 10))
-      .then((responseData) => {
-        const parseResponse = JSON.parse(responseData);
+      .then(() => {
         req.session.response = {
           message: `This list contains your first 10 list from the ${accountPublicKey} name`,
           success: true,
           type: "info",
         };
-        res.render("lists", {
-          list: parseResponse.data,
-        });
+        if (response) {
+          req.session.response = {
+            message: "Account created successfully, List found",
+            success: "info",
+          };
+          return res.redirect("/onboarding");
+        }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        req.session.response = {
+          message: err.error,
+          success: "danger",
+        };
+        return res.redirect("/onboarding");
+      });
   } else {
     res.redirect("/onboarding/account");
   }
@@ -362,44 +386,26 @@ router.post(
 
 router.get("/sheet/:id", auth, async (req, res) => {
   try {
-    const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
+    const { sheetData } = req.cookies;
+    console.log(sheetData);
+    const sheet = await SheetData.findOne({ googleId: req.params.id });
 
-    const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
-
-    /**
-     * Prints the names and majors of students in a sample spreadsheet:
-     * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
-     */
-
-    const auth = new GoogleAuth({
-      scopes: SCOPES,
-      keyFile: CREDENTIALS_PATH,
-    });
-
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: "v4", auth: client });
-    const response = await sheets.spreadsheets.values.get({
-      auth,
-      spreadsheetId: req.params.id,
-      range: "Sheet1",
-    });
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) {
+    if (!sheet) {
       req.session.response = {
-        message: `No data found in the google sheet`,
-        success: "info",
+        message: `Can't connect to sheet from database`,
+        success: "danger",
       };
       return res.redirect("/onboarding");
-    } else {
-      const storeRowsToCookies = storeGoogleSheetData(rows);
-      req.session.storeData = { rows: rows };
-      req.session.response = {
-        message: `Data found in the google sheet`,
-        success: "info",
-      };
-      res.cookie("rows", storeRowsToCookies).redirect("/onboarding");
     }
+
+    req.session.response = {
+      message: "Google sheet data connected from database",
+      success: "info",
+    };
+
+    req.session.storeData = { rows: sheet };
+    const sheetDataID = sheet.googleId;
+    res.cookie("sheetData", sheetDataID).redirect("/onboarding");
   } catch (error) {
     if (error) {
       req.session.response = {
@@ -422,7 +428,11 @@ router.get("/sheet", auth, async (req, res) => {
     const { sheetID } = req.cookies;
 
     if (sheetID === undefined) {
-      return res.redirect("/onboarding/connect");
+      req.session.response = {
+        message: `Google Sheet ID is not connected. Please connect google sheet`,
+        success: "danger",
+      };
+      return res.redirect("/onboarding");
     }
 
     const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
@@ -435,12 +445,12 @@ router.get("/sheet", auth, async (req, res) => {
 
     const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
 
-    /**
-     * Prints the names and majors of students in a sample spreadsheet:
-     * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     * https://docs.google.com/spreadsheets/d/1bIlgvhRip-_4TwVIhpcfvpNDkT_DU70Fcb9PvwFNE7Y/edit#gid=0
-     * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
-     */
+    // /**
+    //  * Prints the names and majors of students in a sample spreadsheet:
+    //  * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+    //  * https://docs.google.com/spreadsheets/d/1bIlgvhRip-_4TwVIhpcfvpNDkT_DU70Fcb9PvwFNE7Y/edit#gid=0
+    //  * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
+    //  */
 
     const auth = new GoogleAuth({
       scopes: SCOPES,
@@ -454,29 +464,47 @@ router.get("/sheet", auth, async (req, res) => {
       spreadsheetId: googleID,
       range: "Sheet1",
     });
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) {
+    const rows = response.data;
+
+    if (rows === undefined || null) {
       req.session.response = {
         message: `No data found in the google sheet`,
         success: "info",
       };
       return res.redirect("/onboarding");
-    } else {
-      const storeRowsToCookies = storeGoogleSheetData(rows);
+    }
+
+    const spreadSheetData = new SheetData({
+      user: req.user._id,
+      googleId: googleID,
+      rowData: rows,
+    });
+
+    spreadSheetData.save((err, data) => {
+      if (err) {
+        req.session.response = {
+          message: `An error occur: ${err.message}`,
+          success: "danger",
+        };
+        return res.redirect("/onboarding");
+      }
+
       req.session.response = {
-        rows: rows,
-        message: `Data found in the google sheet`,
+        message: `Saved google sheet data to database`,
         success: "info",
       };
-      res.cookie("rows", storeRowsToCookies).redirect("/onboarding");
-    }
+
+      req.session.storeData = { rows: data };
+      const sheetDataID = data.googleId;
+      res.cookie("sheetData", sheetDataID).redirect("/onboarding");
+    });
   } catch (error) {
     if (error) {
       req.session.response = {
         message: `An error occur: ${error.message}`,
-        success: "info",
+        success: "danger",
       };
-      return res.redirect("/onboarding");
+      res.redirect("/onboarding");
     }
   }
 
@@ -490,45 +518,53 @@ router.get("/sheet", auth, async (req, res) => {
 
 router.post("/upload/sheet/:id", auth, async (req, res) => {
   try {
-    const { rows } = req.cookies;
+    const { sheetID, sheetData } = req.cookies;
 
-    if (rows === undefined) {
+    const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
+
+    console.log(getGoogleSheetId);
+
+    const { limit } = getGoogleSheetId.payload;
+
+    console.log(limit, sheetData);
+
+    const getSheetById = await SheetData.findOne({ googleId: sheetData });
+
+    if (!getSheetById) {
       req.session.response = {
-        message: `Google sheet is not connected`,
+        message: `Can't connect to database`,
         success: "danger",
       };
       return res.redirect("/onboarding");
     }
 
+    const items = getSheetById.rowData.values;
+
     function forEachWithDelay(array, callback, delay) {
       let i = 0;
       let interval = setInterval(() => {
         callback(array[i], i, array);
-        if (++i === array.length) clearInterval(interval);
+        if (++i === 300) clearInterval(interval);
       }, delay);
     }
-
-    const decodeRow = jwt.verify(rows, googleSheetToken);
-
-    const items = decodeRow.payload;
-    console.log(items);
 
     forEachWithDelay(
       items,
       (item, i) => {
-        console.log(`#${i}: ${item[0]} `);
+        console.log(i, item);
 
-        const FName = item[1] || "";
-        const LName = item[2] || "";
+        const FName = item[1];
+        const LName = item[2];
         const Email = item[0];
+        const IP = item[3];
         const { account } = req.cookies;
 
         const strAccount = jwt.verify(account, accountToken.Secret);
 
-        const { accountAPIkey, baseURL } = strAccount.payload;
+        const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
         const config = {
-          publicKey: accountAPIkey,
+          publicKey: accountPublicKey,
           secret: accountAPIkey,
           baseUrl: baseURL,
         };
@@ -539,16 +575,15 @@ router.post("/upload/sheet/:id", auth, async (req, res) => {
           FNAME: FName,
           LNAME: LName,
           EMAIL: Email,
+          ip_address: IP,
         };
 
         subscribers
           .create(req.params.id, userInfo)
           .then(function (responseData) {
             req.session.response = {
-              rows: rows,
               message: `Upload #${i}: ${item.FirstName} successfully`,
               success: "info",
-              data: responseData,
             };
             console.log(responseData);
           })

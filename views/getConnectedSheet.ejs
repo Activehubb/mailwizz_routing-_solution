@@ -55,8 +55,27 @@
                           type="text"
                           placeholder="Name Your ID"
                           name="idName"
+                          required
+                          aria-required="true"
                         />
                         <i class="lni lni-key"></i>
+                      </div>
+                    </div>
+                    <!-- form input -->
+                  </div>
+
+                  <div class="col-md-12">
+                    <div class="form-input">
+                      <label>Limit of data to upload to MW</label>
+                      <div class="input-items default">
+                        <input
+                          type="number"
+                          placeholder="Your Google Sheet ID"
+                          name="limit"
+                          required
+                          aria-required="true"
+                        />
+                        <i class="lni lni-slice"></i>
                       </div>
                     </div>
                     <!-- form input -->
@@ -69,6 +88,8 @@
                           type="text"
                           placeholder="Your Google Sheet ID"
                           name="googleID"
+                          required
+                          aria-required="true"
                         />
                         <i class="lni lni-information"></i>
                       </div>
@@ -81,7 +102,7 @@
                         class="btn primary-btn btn-rounded-full"
                         type="submit"
                       >
-                        Create Account
+                        Connect G-Sheet
                       </button>
                     </div>
                     <!-- form input -->

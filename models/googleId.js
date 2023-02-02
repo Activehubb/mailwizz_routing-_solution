@@ -11,6 +11,9 @@ const googleIDSchema = new Schema(
       type: String,
       required: true,
     },
+    limit: {
+      type: String
+    },
     googleID: {
       type: String,
       required: true,
