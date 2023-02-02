@@ -22,6 +22,7 @@ const User = require("../models/user");
 const GoogleID = require("../models/googleId");
 const sheetData = require("../models/sheet");
 const SheetData = require("../models/sheet");
+const { clearCookie } = require("../middleware/clearCookie");
 
 const router = express.Router();
 
@@ -601,7 +602,7 @@ router.post("/upload/sheet/:id", auth, async (req, res) => {
     );
 
     req.session.response = {
-      message: `Upload in a minute`,
+      message: `Upload session start in a minute, you can view the progress in your log dashboard`,
       success: "info",
     };
     res.status(200).redirect(`/onboarding/upload/sheet/${req.params.id}`);
@@ -648,23 +649,27 @@ router.get("/delete/account/:id", auth, async (req, res) => {
     return res.redirect("/onboarding");
   }
 });
-router.get("/delete/user/:id", auth, async (req, res) => {
+router.get("/delete/user", [auth, clearCookie], async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete({ _id: req.params.id });
+    await User.findByIdAndDelete({ _id: req.user.id });
+    await SheetData.findByIdAndDelete({ user: req.user.id });
+    await GoogleID.findByIdAndDelete({ user: req.user.id });
+    await Account.findByIdAndDelete({ user: req.user.id });
 
-    if (user !== null) {
-      req.session.response = {
-        message: `Account Deleted successfully`,
-        success: "success",
-      };
-      return res.redirect("/onboarding");
-    }
+    console.log(req.user.id);
+
+    req.session.response = {
+      message: `User application deleted successfully...`,
+      success: "info",
+    };
+
+    res.redirect("/onboarding");
   } catch (error) {
     req.session.response = {
       message: `${error.message}`,
       success: "danger",
     };
-    return res.redirect("/onboarding");
+    return res.redirect("/auth/login");
   }
 });
 router.get("/del/account/:id", auth, (req, res) => {
@@ -675,8 +680,7 @@ router.get("/del/sheet/:id", auth, (req, res) => {
   const id = req.params.id;
   res.render("sheetDel", { id: id });
 });
-router.get("/del/user/:id", auth, (req, res) => {
-  const id = req.params.id;
-  res.render("userDel", { id: id });
+router.get("/del/user", auth, (req, res) => {
+  res.render("userDel");
 });
 module.exports = router;

@@ -24,12 +24,12 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     console.log(user);
 
-    if (user === null) {
+    if (!user) {
       req.session.response = {
-        message: "Invalid credentials",
+        message: "User does not exist",
         success: "danger",
       };
-     return res.redirect("/auth/login");
+      return res.redirect("/auth/login");
     } else if (user) {
       console.log("userdata", user);
 
@@ -57,6 +57,10 @@ router.post("/login", async (req, res) => {
     }
   } catch (error) {
     console.log(error.message);
+    req.session.response = {
+      message: `An error occur: ${error.message}`,
+      success: "danger",
+    };
   }
 });
 
@@ -71,6 +75,15 @@ router.get("/signup", (req, res) => {
 
 router.post("/signup", async (req, res) => {
   try {
+    const checkUserIsAvailable = await User.findOne({ email: req.body.email });
+
+    if (checkUserIsAvailable) {
+      req.session.response = {
+        message: "There is a user with this email, kindly login",
+        success: "info",
+      };
+      return res.redirect("/auth/signup");
+    }
     // Hash password
     const genSalt = await bcrypt.genSalt(10);
     const hashPass = await bcrypt.hash(req.body.password, genSalt);
@@ -84,7 +97,7 @@ router.post("/signup", async (req, res) => {
     await user.save();
 
     // Assign a token TO Data
-    const assignToken = await tokens(user);
+    const assignToken = tokens(user);
 
     // Store assignToken in a cookie
     const cookieOption = {
@@ -99,24 +112,11 @@ router.post("/signup", async (req, res) => {
   } catch (error) {
     console.log(error.message);
     req.session.response = {
-      message: "An error occur",
+      message: `An error occur: ${error.message}`,
       success: "danger",
     };
   }
 });
-
-// // Auth with google
-// router.get(
-//   "/google",
-//   passport.authenticate("google", {
-//     scope: ["profile"],
-//   })
-// );
-
-// // CB for google to redirect to
-// router.get("/google/redirect", passport.authenticate("google"), (req, res) => {
-//   res.redirect("/onboarding/");
-// });
 
 router.get("/logout", (req, res) => {
   res.send("logout");

@@ -27,39 +27,44 @@
     <link rel="stylesheet" href="../assets/css/lineicons.css" />
 
     <!--====== Style css ======-->
+    <link rel="stylesheet" href="../assets/css/stylesheet.css" />
     <link rel="stylesheet" href="../assets/scss/starter.css" />
 
-    <link
-      rel="stylesheet"
-      href="../assets/scss/call-to-action/call-to-action-01.css"
-    />
+    <link rel="stylesheet" href="../assets/scss/sign-in-up/sign-in-up-01.css" />
   </head>
 
   <body>
-    <!--====== CALL TO ACTION ONE PART START ======-->
+    <!--====== SIGNIN ONE PART START ======-->
 
-    <section class="call-action-area call-action-one">
+    <section class="signin-area signin-one h-vh">
       <div class="container">
-        <div class="row align-items-center call-action-content">
-          <div class="col-xl-8 col-lg-8">
-            <div class="call-action-text">
-              <h2 class="action-title">
-                If you delete the link will be gone forever.
-              </h2>
-              <p class="text-lg">Are you sure you want to proceed?</p>
+        <div class="row justify-content-center">
+          <div class="col-lg-5">
+            <div class="signin-form form-style-two rounded-buttons">
+              <div class="row">
+                <div class="col-md-12">
+                  <h2 class="text-center f-24">
+                    If you delete the link will be gone forever.
+                  </h2>
+                  <p class="text-lg">Are you sure you want to proceed?</p>
+                </div>
+
+                <div class="col-md-12 my-4">
+                  <div class="form-input rounded-buttons">
+                    <a
+                      type="button"
+                      class="text-white bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-md shadow-red-500/50 dark:shadow-md dark:shadow-red-800/80 font-medium rounded-lg text-sm px-2.5 py-2.5 text-center mr-2 mb-2"
+                      href="/onboarding/delete/account/<%=id %>"
+                    >
+                      <i class="lni lni-trash-can"></i>
+                      Delete
+                    </a>
+                  </div>
+                  <!-- form input -->
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="col-xl-4 col-lg-4">
-            <div class="call-action-btn rounded-buttons text-lg-end">
-              <a
-                type="button"
-                class="text-white bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-md shadow-red-500/50 dark:shadow-md dark:shadow-red-800/80 font-medium rounded-lg text-sm px-2.5 py-2.5 text-center mr-2 mb-2"
-                href="/onboarding/delete/account/<%=id %>"
-              >
-                <i class="lni lni-trash-can"></i>
-                Delete
-              </a>
-            </div>
+            <!-- signin form -->
           </div>
         </div>
         <!-- row -->
@@ -67,8 +72,9 @@
       <!-- container -->
     </section>
 
-    <!--====== CALL TO ACTION ONE PART ENDS ======-->
-  </body>
+    <!--====== SIGNIN ONE PART ENDS ======-->
 
-  
+    <script src="../assets/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </body>
 </html>
