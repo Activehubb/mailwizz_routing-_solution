@@ -686,7 +686,7 @@
                 <a
                   type="button"
                   class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-md shadow-blue-500/50 dark:shadow-md dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-2.5 py-2.5 text-center mr-2 mb-2"
-                  href="/onboarding/lists/upload/<%= element._id %>"
+                  href="/onboarding/lists/<%= element._id %>"
                 >
                   <i class="lni lni-magnet"></i>
                  Use Account
@@ -709,7 +709,7 @@
       <div class="container">
         <section class="bg-gray-50 py-8 px-4 h-full">
           <div class="container">
-            <h4 class="tabs-title mb-30">Google Sheet Data</h4>
+            <h4 class="tabs-title mb-30"> <%= storeData.rows.idName %> Google Sheet ID: <%= storeData.rows.googleId %></h4>
             <table class="table-auto w-full bg-white shadow rounded">
               <thead class="border-b border-gray-100">
                 <tr>

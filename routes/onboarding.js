@@ -227,11 +227,11 @@ router.get("/lists", auth, async (req, res) => {
 
 // Get Lists
 router.get("/lists/:id", auth, async (req, res) => {
-  const getAccountAPIkey = await Account.findById(req.params.id);
+  try {
+    const getAccountAPIkey = await Account.findById(req.params.id);
 
-  console.log(getAccountAPIkey);
+    console.log(getAccountAPIkey);
 
-  if (getAccountAPIkey !== undefined) {
     const { accountAPIkey, baseURL, accountPublicKey } = getAccountAPIkey;
 
     const config = {
@@ -244,12 +244,7 @@ router.get("/lists/:id", auth, async (req, res) => {
 
     lists
       .getLists((page = 1), (perPage = 10))
-      .then(() => {
-        req.session.response = {
-          message: `This list contains your first 10 list from the ${accountPublicKey} name`,
-          success: true,
-          type: "info",
-        };
+      .then((response) => {
         if (response) {
           req.session.response = {
             message: "Account created successfully, List found",
@@ -260,13 +255,17 @@ router.get("/lists/:id", auth, async (req, res) => {
       })
       .catch((err) => {
         req.session.response = {
-          message: err.error,
+          message: "Invalid API request",
           success: "danger",
         };
         return res.redirect("/onboarding");
       });
-  } else {
-    res.redirect("/onboarding/account");
+  } catch (error) {
+    req.session.response = {
+      message: error.message,
+      success: "danger",
+    };
+    return res.redirect("/onboarding");
   }
 });
 
@@ -387,9 +386,8 @@ router.post(
 
 router.get("/sheet/:id", auth, async (req, res) => {
   try {
-    const { sheetData } = req.cookies;
-    console.log(sheetData);
     const sheet = await SheetData.findOne({ googleId: req.params.id });
+    console.log("sheetAvailable:", sheet);
 
     if (!sheet) {
       req.session.response = {
@@ -438,9 +436,9 @@ router.get("/sheet", auth, async (req, res) => {
 
     const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
 
-    console.log(getGoogleSheetId);
+    // console.log(getGoogleSheetId);
 
-    const { googleID } = getGoogleSheetId.payload;
+    const { googleID, idName } = getGoogleSheetId.payload;
 
     const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
@@ -478,6 +476,7 @@ router.get("/sheet", auth, async (req, res) => {
     const spreadSheetData = new SheetData({
       user: req.user._id,
       googleId: googleID,
+      idName: idName,
       rowData: rows,
     });
 
@@ -496,6 +495,7 @@ router.get("/sheet", auth, async (req, res) => {
       };
 
       req.session.storeData = { rows: data };
+      console.log("dataCreated:", data);
       const sheetDataID = data.googleId;
       res.cookie("sheetData", sheetDataID).redirect("/onboarding");
     });
