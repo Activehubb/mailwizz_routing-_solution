@@ -9,24 +9,19 @@ const {
 } = require("../utils/utils");
 const jwt = require("jsonwebtoken");
 const { accountToken, token, googleSheetToken } = require("../config/config");
-const EventEmitter = require("events");
 const uploadFile = require("../middleware/fileupload");
 const fs = require("fs");
 const parse = require("csv-parser");
-const fsp = require("fs").promises;
 const path = require("path");
 const process = require("process");
 const { GoogleAuth } = require("google-auth-library");
 const { google } = require("googleapis");
 const User = require("../models/user");
 const GoogleID = require("../models/googleId");
-const sheetData = require("../models/sheet");
 const SheetData = require("../models/sheet");
 const { clearCookie } = require("../middleware/clearCookie");
 
 const router = express.Router();
-
-const sheetBucket = [];
 
 // Get all Account
 router.get("/", auth, async (req, res) => {
@@ -151,33 +146,6 @@ router.get("/connect", auth, async (req, res) => {
   }
 });
 
-router.get("/list", auth, async (req, res) => {
-  const { account } = req.cookies;
-
-  if (account !== undefined) {
-    const strAccount = jwt.verify(account, accountToken.Secret);
-
-    const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
-
-    const config = {
-      publicKey: accountPublicKey,
-      secret: accountAPIkey,
-      baseUrl: baseURL,
-    };
-
-    const lists = new mailWizz.Lists(config);
-
-    lists
-      .getLists((page = 1), (perPage = 10))
-      .then((response) => {
-        if (response) res.redirect("/onboarding");
-      })
-      .catch((err) => console.log(err));
-  } else {
-    res.redirect("/onboarding/account");
-  }
-});
-
 router.get("/lists", auth, async (req, res) => {
   try {
     const { account } = req.cookies;
@@ -250,7 +218,10 @@ router.get("/lists/:id", auth, async (req, res) => {
             message: "Account created successfully, List found",
             success: "info",
           };
-          return res.redirect("/onboarding");
+
+          const strAccount = storeAccount(getAccountAPIkey);
+
+          return res.cookie("account", strAccount).redirect("/onboarding");
         }
       })
       .catch((err) => {
@@ -387,7 +358,9 @@ router.post(
 router.get("/sheet/:id", auth, async (req, res) => {
   try {
     const sheet = await SheetData.findOne({ googleId: req.params.id });
-    console.log("sheetAvailable:", sheet);
+    const sheetID = await GoogleID.findOne({ googleID: req.params.id });
+
+    console.log(sheetID)
 
     if (!sheet) {
       req.session.response = {
@@ -402,9 +375,13 @@ router.get("/sheet/:id", auth, async (req, res) => {
       success: "info",
     };
 
-    req.session.storeData = { rows: sheet };
-    const sheetDataID = sheet.googleId;
-    res.cookie("sheetData", sheetDataID).redirect("/onboarding");
+    req.session.storeData = { rows: sheet,
+      sheetID: sheetID
+    };
+
+    const storeGoogleSheetId = storeGoogleSheetID(sheetID);
+
+    res.cookie("sheetID", storeGoogleSheetId).redirect("/onboarding");
   } catch (error) {
     if (error) {
       req.session.response = {
@@ -414,13 +391,6 @@ router.get("/sheet/:id", auth, async (req, res) => {
       return res.redirect("/onboarding");
     }
   }
-
-  // console.log("Name, Major:");
-
-  // rows.forEach((row) => {
-  //   // Print columns A and E, which correspond to indices 0 and 4.
-  //   console.log(`${row[0]}, ${row[4]}`);
-  // });
 });
 router.get("/sheet", auth, async (req, res) => {
   try {
@@ -519,25 +489,21 @@ router.get("/sheet", auth, async (req, res) => {
 
 router.post("/upload/sheet/:id", auth, async (req, res) => {
   try {
-    const { sheetID, sheetData } = req.cookies;
+    const { sheetID } = req.cookies;
 
-    const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
-
-    console.log(getGoogleSheetId);
-
-    const { limit } = getGoogleSheetId.payload;
-
-    console.log(limit, sheetData);
-
-    const getSheetById = await SheetData.findOne({ googleId: sheetData });
-
-    if (!getSheetById) {
+    if (sheetID === undefined) {
       req.session.response = {
-        message: `Can't connect to database`,
+        message: `Kindly choose google sheet ID if available or create one to database`,
         success: "danger",
       };
       return res.redirect("/onboarding");
     }
+
+    const getGoogleSheetId = jwt.verify(sheetID, googleSheetToken);
+
+    const { limit, googleID } = getGoogleSheetId.payload;
+
+    const getSheetById = await SheetData.findOne({ googleId: googleID });
 
     const items = getSheetById.rowData.values;
 
@@ -545,7 +511,7 @@ router.post("/upload/sheet/:id", auth, async (req, res) => {
       let i = 0;
       let interval = setInterval(() => {
         callback(array[i], i, array);
-        if (++i === 300) clearInterval(interval);
+        if (++i === Number(limit) || array.length) clearInterval(interval);
       }, delay);
     }
 
