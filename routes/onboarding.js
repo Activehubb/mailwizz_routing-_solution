@@ -511,7 +511,7 @@ router.post("/upload/sheet/:id", auth, async (req, res) => {
       let i = 0;
       let interval = setInterval(() => {
         callback(array[i], i, array);
-        if (++i === Number(limit) || array.length) clearInterval(interval);
+        if (++i === array.length) clearInterval(interval);
       }, delay);
     }
 
