@@ -21,33 +21,46 @@ const GoogleID = require("../models/googleId");
 const SheetData = require("../models/sheet");
 const { clearCookie } = require("../middleware/clearCookie");
 
+// Create a Router instance from the express module
 const router = express.Router();
 
-// Get all Account
+// Define the GET route for all Accounts
+// Use the "auth" middleware for authentication, and
+// the "async" keyword for asynchronous programming
 router.get("/", auth, async (req, res) => {
   try {
+    // Get the "account" cookie
     const { account } = req.cookies;
 
+    // Find all accounts in the database that belong to the user
     const accountDB = await Account.find({ user: req.user._id });
 
+    // If the "account" cookie is not undefined,
     if (account !== undefined) {
+      // Verify the account cookie and extract its payload
       const strAccount = jwt.verify(account, accountToken.Secret);
-
       const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
+      // Create a config object with the extracted information
       const config = {
         publicKey: accountPublicKey,
         secret: accountAPIkey,
         baseUrl: baseURL,
       };
 
+      // Create a new instance of the mailWizz "Lists" class
       const lists = new mailWizz.Lists(config);
 
+      // Get the lists from the API and parse the response
       lists
         .getLists((page = 1), (perPage = 10))
         .then((response) => {
           const parseResponse = JSON.parse(response);
+
+          // Log the parseResponse to the console
           console.log(parseResponse);
+
+          // Render the "home" view and pass the accountDB and list data
           res.render("home", {
             accountDB: accountDB,
             list: parseResponse.data,
@@ -55,9 +68,11 @@ router.get("/", auth, async (req, res) => {
         })
         .catch((err) => console.log(err));
     } else {
+      // If the "account" cookie is undefined, render the "dashboard" view
       res.render("dashboard", { user: req.user });
     }
   } catch (error) {
+    // Log any errors that occur
     console.log(error);
   }
 });
@@ -65,16 +80,21 @@ router.get("/", auth, async (req, res) => {
 // Get Account Template
 router.get("/account", auth, async (req, res) => {
   try {
+    // Find account data for current user from Account collection
     const account = await Account.find({ user: req.user._id });
 
+    // If there's existing account data
     if (account.length !== 0) {
+      // Render the "getAccount" view and pass the account data
       res.render("getAccount", {
         accountDB: account,
       });
     } else {
+      // Render the "account" view if there's no existing account data
       res.render("account");
     }
   } catch (error) {
+    // Log error message
     console.log(error.message);
   }
 });
@@ -82,8 +102,10 @@ router.get("/account", auth, async (req, res) => {
 // Create Account
 router.post("/account", auth, async (req, res) => {
   try {
+    // Destructure the account data from the request body
     const { accountAPIkey, accountPublicKey, baseURL } = req.body;
 
+    // Create a new Account document
     const account = new Account({
       user: req.user._id,
       accountAPIkey,
@@ -91,12 +113,16 @@ router.post("/account", auth, async (req, res) => {
       baseURL,
     });
 
+    // Save the account data to the database
     await account.save();
 
+    // Call the storeAccount utility function and pass the account data
     const strAccount = storeAccount(account);
 
+    // Store the returned string as a cookie with the name "account"
     res.cookie("account", strAccount).redirect("/onboarding/lists");
   } catch (error) {
+    // Log error message
     console.log(error.message);
   }
 });
@@ -104,8 +130,10 @@ router.post("/account", auth, async (req, res) => {
 // Connect ID
 router.post("/connect", auth, async (req, res) => {
   try {
+    // Destructure the googleId data from the request body
     const { idName, googleID, limit, range } = req.body;
 
+    // Create a new GoogleID document
     const googleId = new GoogleID({
       user: req.user._id,
       idName,
@@ -114,123 +142,99 @@ router.post("/connect", auth, async (req, res) => {
       range,
     });
 
+    // Save the googleId data to the database
     await googleId.save();
 
+    // Call the storeGoogleSheetID utility function and pass the googleId data
     const storeGoogleSheetId = storeGoogleSheetID(googleId);
 
+    // Store the returned string as a cookie with the name "sheetID"
     res.cookie("sheetID", storeGoogleSheetId).redirect("/onboarding/sheet");
   } catch (error) {
+    // Log error message
     console.log(error.message);
   }
 });
 
+// The first route "/connect" handles the connection with Google Sheets.
+// The "auth" middleware is used to check if the user is authenticated before accessing this route.
+// The "async" keyword is used to handle asynchronous operations in the route.
+
 router.get("/connect", auth, async (req, res) => {
   try {
+    // Search for the user's Google ID in the database
     const getAvailableSheet = await GoogleID.find({ user: req.user.id });
 
+    // Store a response message in the session to be displayed to the user
     req.session.response = {
       message: `Save google sheet or use if google sheet is available`,
       success: true,
       type: "info",
     };
 
+    // If the user has a Google ID available, render the "getConnectedSheet" template
+    // and pass the "googleSheet" data to the template
     if (getAvailableSheet.length !== 0) {
       res.render("getConnectedSheet", {
         googleSheet: getAvailableSheet,
       });
     } else {
+      // If the user does not have a Google ID available, render the "connect" template
       res.render("connect");
     }
   } catch (error) {
+    // Log any errors that occur during the operation
     console.log(error.message);
   }
 });
 
+// The second route "/lists" is used to get a list of mailing lists from the MailWizz API.
+// The "auth" middleware is used to check if the user is authenticated before accessing this route.
+
 router.get("/lists", auth, async (req, res) => {
   try {
+    // Check if the "account" cookie is set
     const { account } = req.cookies;
 
     if (account) {
+      // If the "account" cookie is set, verify the contents of the cookie
       const strAccount = jwt.verify(account, accountToken.Secret);
 
+      // Destructure the payload of the verified cookie
       const { accountAPIkey, baseURL, accountPublicKey } = strAccount.payload;
 
+      // Create the configuration object for the MailWizz API client
       const config = {
         publicKey: accountPublicKey,
         secret: accountAPIkey,
         baseUrl: baseURL,
       };
 
+      // Create a new instance of the MailWizz API client
       const lists = new mailWizz.Lists(config);
 
+      // Call the "getLists" method of the MailWizz API client
       lists
         .getLists((page = 1), (perPage = 10))
         .then((response) => {
           if (response) {
+            // If a response is received, store a success message in the session
             req.session.response = {
               message: "Account created successfully, List found",
               success: "info",
             };
+            // Redirect the user to the "/onboarding" route
             return res.redirect("/onboarding");
           }
         })
         .catch((err) => {
           req.session.response = {
-            message: err.error,
+            message: "Invalid API request",
             success: "danger",
           };
           return res.redirect("/onboarding");
         });
-    } else {
-      res.redirect("/onboarding/account");
     }
-  } catch (error) {
-    req.session.response = {
-      message: error.message,
-      success: "danger",
-    };
-    res.redirect("/onboarding");
-  }
-});
-
-// Get Lists
-router.get("/lists/:id", auth, async (req, res) => {
-  try {
-    const getAccountAPIkey = await Account.findById(req.params.id);
-
-    console.log(getAccountAPIkey);
-
-    const { accountAPIkey, baseURL, accountPublicKey } = getAccountAPIkey;
-
-    const config = {
-      publicKey: accountPublicKey,
-      secret: accountAPIkey,
-      baseUrl: baseURL,
-    };
-
-    const lists = new mailWizz.Lists(config);
-
-    lists
-      .getLists((page = 1), (perPage = 10))
-      .then((response) => {
-        if (response) {
-          req.session.response = {
-            message: "Account created successfully, List found",
-            success: "info",
-          };
-
-          const strAccount = storeAccount(getAccountAPIkey);
-
-          return res.cookie("account", strAccount).redirect("/onboarding");
-        }
-      })
-      .catch((err) => {
-        req.session.response = {
-          message: "Invalid API request",
-          success: "danger",
-        };
-        return res.redirect("/onboarding");
-      });
   } catch (error) {
     req.session.response = {
       message: error.message,
@@ -239,6 +243,65 @@ router.get("/lists/:id", auth, async (req, res) => {
     return res.redirect("/onboarding");
   }
 });
+
+// Get Lists Route
+router.get("/lists/:id", auth, async (req, res) => {
+  // Try to find the account details by ID
+  try {
+    const getAccountAPIkey = await Account.findById(req.params.id);
+
+    // Log the account details for debugging purposes
+    console.log(getAccountAPIkey);
+
+    // Destructure the account details into separate variables
+    const { accountAPIkey, baseURL, accountPublicKey } = getAccountAPIkey;
+
+    // Create the configuration object for MailWizz API
+    const config = {
+      publicKey: accountPublicKey,
+      secret: accountAPIkey,
+      baseUrl: baseURL,
+    };
+
+    // Create a new instance of the MailWizz Lists API using the configuration
+    const lists = new mailWizz.Lists(config);
+
+    // Call the `getLists` method of the Lists API, passing in the page and perPage parameters (default to 1 and 10 respectively)
+    lists
+      .getLists((page = 1), (perPage = 10))
+      .then((response) => {
+        // If the response is truthy (not null or undefined), set the success message in the session and redirect to the onboarding page
+        if (response) {
+          req.session.response = {
+            message: "Account created successfully, List found",
+            success: "info",
+          };
+
+          // Store the account details in a cookie
+          const strAccount = storeAccount(getAccountAPIkey);
+
+          // Set the account cookie and redirect to the onboarding page
+          return res.cookie("account", strAccount).redirect("/onboarding");
+        }
+      })
+      .catch((err) => {
+        // If there is an error, set the error message in the session and redirect to the onboarding page
+        req.session.response = {
+          message: "Invalid API request",
+          success: "danger",
+        };
+        return res.redirect("/onboarding");
+      });
+  } catch (error) {
+    // If there is an error finding the account details, set the error message in the session and redirect to the onboarding page
+    req.session.response = {
+      message: error.message,
+      success: "danger",
+    };
+    return res.redirect("/onboarding");
+  }
+});
+
 
 // Create List
 router.get("/lists/upload/:id", auth, (req, res) => {
@@ -360,7 +423,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
     const sheet = await SheetData.findOne({ googleId: req.params.id });
     const sheetID = await GoogleID.findOne({ googleID: req.params.id });
 
-    console.log(sheetID)
+    console.log(sheetID);
 
     if (!sheet) {
       req.session.response = {
@@ -375,9 +438,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
       success: "info",
     };
 
-    req.session.storeData = { rows: sheet,
-      sheetID: sheetID
-    };
+    req.session.storeData = { rows: sheet, sheetID: sheetID };
 
     const storeGoogleSheetId = storeGoogleSheetID(sheetID);
 
