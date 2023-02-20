@@ -434,7 +434,7 @@ router.get("/sheet/:id", auth, async (req, res) => {
     }
 
     req.session.response = {
-      message: "Google sheet data connected from database",
+      message: "Google sheet data connected from database, proceed to account or choose a list",
       success: "info",
     };
 
